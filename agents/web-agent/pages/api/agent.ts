@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     );
     geminiRaw = geminiRes.data;
-    console.log('Gemini response:', JSON.stringify(geminiRes, null, 2));
+    // console.log('Gemini response:', JSON.stringify(geminiRes, null, 2));
     // Try to extract the text from all possible locations
     if (geminiRaw?.candidates?.length > 0) {
       const parts = geminiRaw.candidates[0]?.content?.parts;
