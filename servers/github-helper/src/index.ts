@@ -1,73 +1,160 @@
 /*
- * MCP-for-Beginners: 03-GettingStarted/05-stdio-server
- *
  * This is the main file for your 'GIT and GITHUB Helper' MCP server.
- * It listens for JSON-RPC requests on 'stdin', queues the requested task,
- * and writes JSON-RPC responses to 'stdout'.
+ * It uses the '@modelcontextprotocol/sdk/server' to handle all
+ * stdio communication and JSON-RPC method routing.
  */
 
-import * as readline from 'readline';
+import { Server } from '@modelcontextprotocol/sdk/server/index';
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types";
 import { randomUUID } from 'crypto';
-
-// --- MCP Request/Response Types ---
-
-interface McpRequest {
-  jsonrpc: '2.0';
-  id: number | string;
-  method: string;
-  params: unknown;
-}
-
-interface McpResponse {
-  jsonrpc: '2.0';
-  id: number | string;
-  result?: unknown;
-  error?: { code: number; message: string; data?: unknown };
-}
+import { z } from "zod";
+import { initQueueDb, addJobToQueue } from './queue'; // <-- Import our queue
 
 // --- Our Task-Specific Types ---
-
-interface CherryPickParams {
+type CherryPickParamsType = {
   repository: string;
   targetBranch: string;
   prFilterQuery: string;
-  callbackUrl?: string; // Optional: where to send a webhook on completion
-}
+  callbackUrl?: string;
+};
 
-interface JobStatus {
+type JobStatusType = {
   jobId: string;
   status: 'queued' | 'failed' | 'running';
   message: string;
-}
+};
 
+const CherryPickParams = z.object({
+  repository: z.string().describe("Repository name"),
+  targetBranch: z.string().describe("Target branch for cherry-pick"),
+  prFilterQuery: z.string().describe("Pull request filter query"),
+  callbackUrl: z.string().url().optional().describe("Optional callback URL"),
+});
+
+const JobStatus = z.object({
+  jobId: z.string(),
+  status: z.enum(['queued', 'failed', 'running']),
+  message: z.string(),
+});
+
+const server = new Server(
+  {
+    name: "github-helper-server",
+    version: "1.0.0",
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "cherry-pick",
+        description: "Cherry-pick commits from PRs based on a filter query to a target branch",
+        inputSchema: {
+          type: "object",
+          properties: {
+            repository: { type: "string", description: "Repository name" },
+            targetBranch: { type: "string", description: "Target branch for cherry-pick" },
+            prFilterQuery: { type: "string", description: "Pull request filter query" },
+            callbackUrl: { type: "string", description: "Optional callback URL" },
+          },
+          required: ["repository", "targetBranch", "prFilterQuery"],
+        },
+      },
+      {
+        name: "health",
+        description: "Health check tool",
+        inputSchema: {
+          type: "object",
+          properties: {
+          },
+        },
+      },
+      {
+        name: "get_server_info",
+        description: "Get information about this MCP server",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+    ],
+  };
+});
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  switch (name) {
+    case "cherry-pick": {
+      const { repository, targetBranch, prFilterQuery, callbackUrl } = CherryPickParams.parse(args);
+      const result = await enqueueCherryPickJob({ repository, targetBranch, prFilterQuery, callbackUrl });
+      console.error(`Enqueued cherry-pick job: ${JSON.stringify(result)}`); // Log to stderr
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Cherry-pick job enqueued with ID: ${result.jobId}`,
+          },
+        ],
+      };
+    }
+
+    case "get_server_info": {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              server_name: "github-helper-server",
+              version: "1.0.0",
+              transport: "stdio",
+              capabilities: ["tools"],
+              description: "GitHub Helper MCP server using stdio transport (MCP 2025-06-18 specification)",
+            }, null, 2),
+          },
+        ],
+      };
+    }
+
+    default:
+      throw new Error(`Unknown tool: ${name}`);
+  }
+});
 // --- Job Queue Stub ---
 
 /**
  * In a real application, this function would connect to a message broker
  * like Redis (e.g., using BullMQ) or RabbitMQ to enqueue the job.
- *
- * The actual cherry-pick script would be run by a separate "Worker"
- * process listening to that queue.
  */
-async function enqueueCherryPickJob(params: CherryPickParams): Promise<JobStatus> {
-  // Use console.error for logging, so it goes to stderr and doesn't
-  // interfere with the stdout JSON-RPC response.
+async function enqueueCherryPickJob(params: CherryPickParamsType): Promise<JobStatusType> {
+  // Use server-side logging. This will go to stderr.
   console.error(
     `[INFO] Enqueuing job for repo: ${params.repository}`
   );
   
   // 1. Validate parameters (example)
   if (!params.repository || !params.targetBranch || !params.prFilterQuery) {
+    // The SDK will catch this error and format it as a JSON-RPC error
     throw new Error('Missing required parameters: repository, targetBranch, prFilterQuery');
   }
 
   // 2. Add to queue (simulated)
   const jobId = randomUUID();
-  // Example: await myJobQueue.add('cherry-pick-task', { ...params, jobId });
-  
+  await addJobToQueue(jobId, params);
+
   console.error(`[INFO] Job enqueued with ID: ${jobId}`);
 
-  // 3. Return the immediate "accepted" status
+  // 3. Return the result. The SDK will format this as a JSON-RPC response.
   return {
     jobId: jobId,
     status: 'queued',
@@ -75,84 +162,29 @@ async function enqueueCherryPickJob(params: CherryPickParams): Promise<JobStatus
   };
 }
 
-// --- Helper to write JSON-RPC responses to stdout ---
-function writeResponse(response: McpResponse) {
-  // Use console.log ONLY for the final JSON-RPC response
-  console.log(JSON.stringify(response));
-}
-
 // --- Main Server Function ---
-
-async function main() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false, // We are not in a TTY
-  });
-
-  console.error(
-    '[INFO] GIT/GITHUB Helper MCP server started. Listening on stdin...'
-  );
-
-  rl.on('line', async (line) => {
-    let request: McpRequest;
-
-    // 1. Parse the incoming request
-    try {
-      request = JSON.parse(line) as McpRequest;
-    } catch (e) {
-      console.error(`[ERROR] Failed to parse input JSON: ${line}`);
-      // Cannot send a valid response if we can't parse the request/ID
-      return;
-    }
-
-    // 2. Process the request
-    try {
-      switch (request.method) {
-        
-        // This is our main operation
-        case 'tasks/cherryPickFromPrFilter':
-          const jobStatus = await enqueueCherryPickJob(
-            request.params as CherryPickParams
-          );
-          writeResponse({
-            jsonrpc: '2.0',
-            id: request.id,
-            result: jobStatus,
-          });
-          break;
-
-        // A standard health-check operation
-        case 'health/ping':
-          writeResponse({
-            jsonrpc: '2.0',
-            id: request.id,
-            result: { status: 'ok', service: 'git-helper' },
-          });
-          break;
-
-        default:
-          throw new Error(`Unknown method: ${request.method}`);
-      }
-    } catch (error: any) {
-      // 3. Handle any errors during processing
-      console.error(
-        `[ERROR] Failed to process request ${request.id}: ${error.message}`
-      );
-      writeResponse({
-        jsonrpc: '2.0',
-        id: request.id,
-        error: {
-          code: -32000, // MCP/JSON-RPC internal error code
-          message: error.message || 'An unknown server error occurred.',
-        },
-      });
-    }
-  });
+// Start the server using stdio transport
+async function runServer() {
+  console.error("Starting MCP stdio server..."); // Log to stderr
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("Server connected via stdio transport"); // Log to stderr
+  await initQueueDb();
 }
+
+// Handle process termination gracefully
+process.on("SIGINT", () => {
+  console.error("Received SIGINT, shutting down gracefully");
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  console.error("Received SIGTERM, shutting down gracefully");
+  process.exit(0);
+});
 
 // Start the server
-main().catch((e) => {
-  console.error(`[FATAL] Server crashed: ${e.message}`);
+runServer().catch((error) => {
+  console.error("Server error:", error);
   process.exit(1);
 });
