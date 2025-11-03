@@ -1,0 +1,23 @@
+{
+  "name": "web-agent",
+  "version": "1.0.0",
+  "description": "A web agent that takes user input, connects to an LLM, and is configurable to an MCP server for cherry-pick tasks.",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "axios": "latest",
+    "dotenv": "^17.2.3",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "@types/react": "^19.2.2",
+    "typescript": "latest"
+  }
+}
