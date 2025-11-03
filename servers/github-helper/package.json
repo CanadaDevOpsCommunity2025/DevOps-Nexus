@@ -2,10 +2,18 @@
   "name": "github-helper",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "type": "module",
+  "bin": {
+      "github-helper-server": "./build/index.js"
   },
+  "scripts": {
+      "build": "tsc",
+      "start": "node build/index.js",
+      "inspector": "npx @modelcontextprotocol/inspector node build/index.js"
+  },
+  "files": [
+      "build"
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC",

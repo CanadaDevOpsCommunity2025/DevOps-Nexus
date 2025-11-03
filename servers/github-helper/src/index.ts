@@ -4,15 +4,15 @@
  * stdio communication and JSON-RPC method routing.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index';
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types";
+} from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from 'crypto';
 import { z } from "zod";
-import { initQueueDb, addJobToQueue } from './queue'; // <-- Import our queue
+import { initQueueDb, addJobToQueue } from './queue.js'; // <-- Import our queue
 
 // --- Our Task-Specific Types ---
 type CherryPickParamsType = {

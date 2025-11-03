@@ -3,7 +3,7 @@ import {
   getNextJob, 
   completeJob, 
   failJob 
-} from './queue';
+} from './queue.js';
 import path from 'path';
 import axios from 'axios';
 
