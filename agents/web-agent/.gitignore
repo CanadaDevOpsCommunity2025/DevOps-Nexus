@@ -1,0 +1,39 @@
+# Dependencies
+/node_modules
+
+# Build Output
+/dist
+/build
+/.out
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime Data
+*.pid
+*.seed
+*.run
+
+# Environment Variables
+# Ignore all .env files (e.g., .env, .env.local)
+.env*
+# ...but DO commit the example file
+!.env.example
+
+# OS / System files
+.DS_Store
+Thumbs.db
+
+# IDE & Editor Directories
+.vscode/
+.idea/
+*.suo
+*.sln
+
+# Test Output
+/coverage
+/.nyc_output
+
+# Next.js build files
+/.next

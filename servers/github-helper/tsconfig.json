@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "es2022",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Paths */
+    "rootDir": "./src",
+    "outDir": "./build",
+
+    /* Strictness */
+    "strict": true,
+    "skipLibCheck": true,
+
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noImplicitAny": true
+
+  },
+  "include": ["src/**/*"] // Only compile files in the 'src' directory
+}
