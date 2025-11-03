@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Gemini Chat Agent</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>Gemini Chat (<span id="model-name">{{ model_name }}</span>)</h1>
+            <div class="model-switcher">
+                <select id="model-select"><option value="">Loading models...</option></select>
+                <button id="apply-model" title="Switch model">Switch</button>
+            </div>
+        </div>
+        <div class="layout">
+            <aside class="sidebar">
+                <h3>Tools</h3>
+                <ul id="tool-list"></ul>
+                <div class="tool-help">
+                    <p>Invoke a tool by typing a command in chat, e.g.:</p>
+                    <code>/tool github.list_repos user=YOUR_GH_USERNAME</code>
+                </div>
+            </aside>
+            <main class="chat-pane">
+                <div id="chat-window"></div>
+                <form id="chat-form">
+                    <input type="text" id="user-input" placeholder="Type your message or /tool ..." autocomplete="off" required />
+                    <button type="submit">Send</button>
+                </form>
+            </main>
+        </div>
+    </div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
