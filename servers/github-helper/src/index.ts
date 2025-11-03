@@ -5,13 +5,14 @@
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from 'crypto';
 import { z } from "zod";
+import { createServer } from 'http';
 import { initQueueDb, addJobToQueue } from './queue.js'; // <-- Import our queue
 
 // --- Our Task-Specific Types ---
@@ -93,7 +94,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-
+  console.log(`Received tool call: ${name} with args: ${JSON.stringify(args)}`);
   switch (name) {
     case "cherry-pick": {
       const { repository, targetBranch, prFilterQuery, callbackUrl } = CherryPickParams.parse(args);
@@ -161,16 +162,31 @@ async function enqueueCherryPickJob(params: CherryPickParamsType): Promise<JobSt
     message: 'Cherry-pick job has been queued successfully.',
   };
 }
-
 // --- Main Server Function ---
-// Start the server using stdio transport
+// Start the server using SSE transport
 async function runServer() {
-  console.error("Starting MCP stdio server..."); // Log to stderr
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Server connected via stdio transport"); // Log to stderr
+  console.error("Starting MCP SSE server..."); // Log to stderr
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8080;
+  
+  const httpServer = createServer((req, res) => {
+    if (req.url === '/mcp/sse') {
+      const transport = new SSEServerTransport('/mcp/sse', res);
+      server.connect(transport).catch((error) => {
+        console.error("Transport connection error:", error);
+      });
+    } else {
+      res.writeHead(404);
+      res.end('Not Found');
+    }
+  });
+
+  httpServer.listen(port, () => {
+    console.error(`Server listening on port ${port}`); // Log to stderr
+  });
+  
   await initQueueDb();
 }
+
 
 // Handle process termination gracefully
 process.on("SIGINT", () => {
