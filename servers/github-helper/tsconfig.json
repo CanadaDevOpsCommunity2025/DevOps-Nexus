@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "es2022",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Paths */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* Strictness */
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"] // Only compile files in the 'src' directory
+}
